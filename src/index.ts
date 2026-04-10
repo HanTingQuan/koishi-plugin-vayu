@@ -8,13 +8,13 @@ export const name = 'vayu'
 export interface Config {
   interval: number
   maxChunks: number
-  punctuationBias: number
+  punctBias: number
 }
 
 export const Config: Schema<Config> = Schema.object({
   interval: Schema.number().default(3000).description('间隔时间（毫秒）'),
   maxChunks: Schema.number().default(5).description('最大分句数。'),
-  punctuationBias: Schema.percent().default(0.7).role('slider').description('标点偏好系数，小于1时鼓励在合适标点后断句，大于1时抑制。'),
+  punctBias: Schema.percent().default(0.7).role('slider').description('标点偏好系数，小于1时鼓励在标点后断句，大于1时抑制。'),
 })
 
 declare module 'koishi' {
@@ -55,7 +55,7 @@ export function apply(ctx: Context, config: Config) {
         return '未找到符合条件的随蓝！'
 
       const words = splitWords(vayu.desc.trim())
-      const chunks = mergeChunks(words, config.maxChunks, config.punctuationBias)
+      const chunks = mergeChunks(words, config.maxChunks, config.punctBias)
       const interval = (options?.interval || 0) * 1000 || config.interval
 
       async function* generator(isDirect: boolean) {
@@ -99,7 +99,7 @@ const BAD_END = /^[\p{Ps}\p{Pi}]$/u
 const BAD_START = /^[\p{Pe}\p{Pf}\p{Po}]$/u
 const GOOD_SPLIT_END = BAD_START
 
-function mergeChunks(words: string[], maxChunks: number, punctuationBias: number): string[] {
+function mergeChunks(words: string[], maxChunks: number, punctBias: number): string[] {
   if (maxChunks <= 1)
     return [words.join('')]
   if (words.length <= maxChunks)
@@ -116,7 +116,7 @@ function mergeChunks(words: string[], maxChunks: number, punctuationBias: number
     if (idx <= 0 || idx >= n)
       return 1.0
     const prevLast = words[idx - 1].slice(-1)
-    return GOOD_SPLIT_END.test(prevLast) ? punctuationBias : 1
+    return GOOD_SPLIT_END.test(prevLast) ? punctBias : 1
   }
 
   const lens = words.map(w => w.length)
