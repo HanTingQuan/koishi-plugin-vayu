@@ -1,7 +1,8 @@
 import type { Context } from 'koishi'
+import { Jieba } from '@node-rs/jieba'
+import { dict } from '@node-rs/jieba/dict'
 import { $, Schema, sleep } from 'koishi'
 import { shortcut, stream } from 'koishi-plugin-montmorill'
-import { cut } from 'nodejieba'
 
 export const name = 'vayu'
 
@@ -40,6 +41,8 @@ export function apply(ctx: Context, config: Config) {
     desc: 'string',
   })
 
+  const jieba = Jieba.withDict(dict)
+
   ctx.command('vayu [id:number]', '从随蓝题库中出题')
     .alias('随蓝', '📘来一道随蓝')
     .option('interval', '-i <interval:number> 间隔时间（秒）')
@@ -54,7 +57,11 @@ export function apply(ctx: Context, config: Config) {
       if (!vayu)
         return '未找到符合条件的随蓝！'
 
-      const words = splitWords(vayu.desc.trim())
+      const description = vayu.desc.trim()
+      const words = description.startsWith('1.')
+        ? description.split(' ').map(word => `${word} `)
+        : jieba.cut(description)
+
       const chunks = mergeChunks(words, config.maxChunks, config.punctBias)
       const interval = (options?.interval || 0) * 1000 || config.interval
 
@@ -87,12 +94,6 @@ export function apply(ctx: Context, config: Config) {
         return '❌️回答错误！'
       return '✅️回答正确！'
     })
-}
-
-function splitWords(text: string): string[] {
-  return text.startsWith('1.')
-    ? text.split(' ').map(word => `${word} `)
-    : cut(text)
 }
 
 const BAD_END = /^[\p{Ps}\p{Pi}]$/u

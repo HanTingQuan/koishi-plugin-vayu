@@ -19,6 +19,6 @@
     "koishi-plugin-montmorill": "workspace:*"
   },
   "dependencies": {
-    "nodejieba": "^3.5.8"
+    "@node-rs/jieba": "^2.0.1"
   }
 }
