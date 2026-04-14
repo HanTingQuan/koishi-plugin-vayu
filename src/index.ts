@@ -1,7 +1,7 @@
 import type { Context } from 'koishi'
 import { Jieba } from '@node-rs/jieba'
 import { dict } from '@node-rs/jieba/dict'
-import { $, Schema, sleep } from 'koishi'
+import { $, Schema, sleep, Time } from 'koishi'
 import { shortcut, stream } from 'koishi-plugin-montmorill'
 
 export const name = 'vayu'
@@ -13,9 +13,9 @@ export interface Config {
 }
 
 export const Config: Schema<Config> = Schema.object({
-  interval: Schema.number().default(3000).description('间隔时间（毫秒）'),
+  interval: Schema.number().default(3 * Time.second).role('ms').description('间隔时间。'),
   maxChunks: Schema.number().default(5).description('最大分句数。'),
-  punctBias: Schema.percent().default(0.7).role('slider').description('标点偏好系数，小于1时鼓励在标点后断句，大于1时抑制。'),
+  punctBias: Schema.number().min(0).step(0.05).default(0.7).max(2).role('slider').description('标点偏好系数，小于1时鼓励在标点后断句，大于1时抑制。'),
 })
 
 declare module 'koishi' {
@@ -31,6 +31,8 @@ declare module 'koishi' {
 }
 
 export const inject = ['database']
+
+const SPACE = /\s+/
 
 export function apply(ctx: Context, config: Config) {
   ctx.model.extend('vayus', {
@@ -59,7 +61,7 @@ export function apply(ctx: Context, config: Config) {
 
       const description = vayu.desc.trim()
       const words = description.startsWith('1.')
-        ? description.split(' ').map(word => `${word} `)
+        ? description.split(SPACE).map(word => `${word} `)
         : jieba.cut(description)
 
       const chunks = mergeChunks(words, config.maxChunks, config.punctBias)
