@@ -1,18 +1,21 @@
-import type { Context } from 'koishi'
+import type { Context, Tables } from 'koishi'
 import { Jieba } from '@node-rs/jieba'
 import { dict } from '@node-rs/jieba/dict'
-import { $, Schema, sleep, Time } from 'koishi'
+import { $, Logger, Schema, sleep, Time } from 'koishi'
 import { shortcut, stream } from 'koishi-plugin-montmorill'
 
 export const name = 'vayu'
+const logger = new Logger(name)
 
 export interface Config {
+  url: string
   interval: number
   maxChunks: number
   punctBias: number
 }
 
 export const Config: Schema<Config> = Schema.object({
+  url: Schema.string().role('url').description('随蓝题库URL。').default('https://raw.githubusercontent.com/HanTingQuan/HTDictionary/refs/heads/main/vayus.csv'),
   interval: Schema.number().default(3 * Time.second).role('ms').description('间隔时间。'),
   maxChunks: Schema.number().default(5).description('最大分句数。'),
   punctBias: Schema.number().min(0).step(0.05).default(0.7).max(2).role('slider').description('标点偏好系数，小于1时鼓励在标点后断句，大于1时抑制。'),
@@ -34,14 +37,14 @@ export const inject = ['database']
 
 const SPACE = /\s+/
 
-export function apply(ctx: Context, config: Config) {
+export async function apply(ctx: Context, config: Config) {
   ctx.model.extend('vayus', {
     id: 'unsigned',
     vayu: 'char',
     source: 'string',
     answer: 'string',
     desc: 'string',
-  })
+  }, { primary: 'id' })
 
   const jieba = Jieba.withDict(dict)
 
@@ -96,6 +99,25 @@ export function apply(ctx: Context, config: Config) {
         return '❌️回答错误！'
       return '✅️回答正确！'
     })
+
+  const stats = await ctx.database.stats()
+  if (!stats.tables.vayus?.count) {
+    logger.info('随蓝题库为空，尝试下载...')
+    const parser = (await import('csv-parse')).parse({ columns: true })
+    const buffer: Tables['vayus'][] = []
+    parser.on('readable', () => {
+      let record = parser.read()
+      while (record !== null) {
+        buffer.push(record)
+        record = parser.read()
+      }
+    })
+    parser.write(await ctx.http.get(config.url))
+    parser.end(() => {
+      ctx.database.upsert('vayus', buffer)
+      logger.info(`随蓝题库下载完成，共 ${buffer.length} 条记录。`)
+    })
+  }
 }
 
 const BAD_END = /^[\p{Ps}\p{Pi}]$/u
