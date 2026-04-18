@@ -8,14 +8,14 @@ export const name = 'vayu'
 const logger = new Logger(name)
 
 export interface Config {
-  url: string
+  dataUrl: string
   interval: number
   maxChunks: number
   punctBias: number
 }
 
 export const Config: Schema<Config> = Schema.object({
-  url: Schema.string().role('url').description('随蓝题库URL。').default('https://raw.githubusercontent.com/HanTingQuan/HTDictionary/refs/heads/main/vayus.csv'),
+  dataUrl: Schema.string().role('url').description('随蓝题库URL。').default('https://raw.githubusercontent.com/HanTingQuan/HTDictionary/refs/heads/main/vayus.csv'),
   interval: Schema.number().default(3 * Time.second).role('ms').description('间隔时间。'),
   maxChunks: Schema.number().default(5).description('最大分句数。'),
   punctBias: Schema.number().min(0).step(0.05).default(0.7).max(2).role('slider').description('标点偏好系数，小于1时鼓励在标点后断句，大于1时抑制。'),
@@ -112,7 +112,7 @@ export async function apply(ctx: Context, config: Config) {
         record = parser.read()
       }
     })
-    parser.write(await ctx.http.get(config.url))
+    parser.write(await ctx.http.get(config.dataUrl))
     parser.end(() => {
       ctx.database.upsert('vayus', buffer)
       logger.info(`随蓝题库下载完成，共 ${buffer.length} 条记录。`)
