@@ -15,7 +15,7 @@ export interface Config {
 }
 
 export const Config: Schema<Config> = Schema.object({
-  dataUrl: Schema.string().role('url').description('随蓝题库URL。').default('https://raw.githubusercontent.com/HanTingQuan/HTDictionary/refs/heads/main/vayus.csv'),
+  dataUrl: Schema.string().role('url').description('随蓝题库URL。').default('https://raw.githubusercontent.com/HanTingQuan/HTDictionary/refs/heads/main/vayu.csv'),
   interval: Schema.number().default(3 * Time.second).role('ms').description('间隔时间。'),
   maxChunks: Schema.number().default(5).description('最大分句数。'),
   punctBias: Schema.number().min(0).step(0.05).default(0.7).max(2).role('slider').description('标点偏好系数，小于1时鼓励在标点后断句，大于1时抑制。'),
@@ -23,7 +23,7 @@ export const Config: Schema<Config> = Schema.object({
 
 declare module 'koishi' {
   interface Tables {
-    vayus: {
+    vayu: {
       id: number
       vayu: string
       source: string
@@ -38,7 +38,7 @@ export const inject = ['database']
 const SPACE = /\s+/
 
 export async function apply(ctx: Context, config: Config) {
-  ctx.model.extend('vayus', {
+  ctx.model.extend('vayu', {
     id: 'unsigned',
     vayu: 'char',
     source: 'string',
@@ -55,7 +55,7 @@ export async function apply(ctx: Context, config: Config) {
       if (!session)
         return
 
-      const [vayu] = await ctx.database.select('vayus', id ? { id } : {})
+      const [vayu] = await ctx.database.select('vayu', id ? { id } : {})
         .orderBy($.random)
         .limit(1)
         .execute()
@@ -91,7 +91,7 @@ export async function apply(ctx: Context, config: Config) {
       if (!session)
         return
 
-      const [vayu] = await ctx.database.get('vayus', { id })
+      const [vayu] = await ctx.database.get('vayu', { id })
       if (!vayu)
         return '未找到符合条件的随蓝！'
       const correctAnswer = vayu.answer.split('/')
@@ -101,10 +101,10 @@ export async function apply(ctx: Context, config: Config) {
     })
 
   const stats = await ctx.database.stats()
-  if (!stats.tables.vayus?.count) {
+  if (!stats.tables.vayu?.count) {
     logger.info('随蓝题库为空，尝试下载...')
     const parser = (await import('csv-parse')).parse({ columns: true })
-    const buffer: Tables['vayus'][] = []
+    const buffer: Tables['vayu'][] = []
     parser.on('readable', () => {
       let record = parser.read()
       while (record !== null) {
@@ -114,7 +114,7 @@ export async function apply(ctx: Context, config: Config) {
     })
     parser.write(await ctx.http.get(config.dataUrl))
     parser.end(() => {
-      ctx.database.upsert('vayus', buffer)
+      ctx.database.upsert('vayu', buffer)
       logger.info(`随蓝题库下载完成，共 ${buffer.length} 条记录。`)
     })
   }
