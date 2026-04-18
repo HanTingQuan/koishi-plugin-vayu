@@ -53,6 +53,7 @@ export async function apply(ctx: Context, config: Config) {
   ctx.command('vayu [id:number]', '从随蓝题库中出题。')
     .alias('随蓝', '📘来一道随蓝')
     .option('interval', '-i <interval:number> 间隔时间（秒）。')
+    .option('answer', '-a 查看答案。')
     .option('bias', '-b <bias:number> 标点偏好系数。', { hidden: true })
     .action(async ({ options, session }, id?: number) => {
       if (!session)
@@ -64,6 +65,9 @@ export async function apply(ctx: Context, config: Config) {
         .execute()
       if (!vayu)
         return '未找到符合条件的随蓝！'
+
+      if (options?.answer)
+        return `${vayu.source}${vayu.vayu}#${vayu.id}${vayu.answer}\n${vayu.desc}`
 
       const description = vayu.desc.trim()
       const words = description.startsWith('1.')
@@ -77,11 +81,25 @@ export async function apply(ctx: Context, config: Config) {
         for (let index = 0; index < chunks.length; index++) {
           const chunk = chunks[index]
 
-          if (index === 0)
-            yield `${vayu.source}${shortcut.input(`/vayu.answer ${vayu.id} `, `#${vayu.id}`)}${vayu.vayu}${chunk}`
-          else if (index === chunks.length - 1)
-            return `${chunk}我读完了。\n> 再来一题 👉 ${shortcut(isDirect, '/vayu')}`
-          else yield chunk
+          if (index === 0) {
+            yield [
+              vayu.source,
+              shortcut.input(`/vayu.answer ${vayu.id} `, `#${vayu.id}`),
+              vayu.vayu,
+              `${chunk}`,
+            ].join('')
+          }
+          else if (index === chunks.length - 1) {
+            return [
+              `${chunk}我读完了。`,
+              `> 回答随蓝 👉 ${shortcut(isDirect, `/vayu.answer ${vayu.id}`)}`,
+              `> 查看答案 👉 ${shortcut(isDirect, `/vayu ${vayu.id} -a`)}`,
+              `> 再来一题 👉 ${shortcut(isDirect, '/vayu')}`,
+            ].join('\n')
+          }
+          else {
+            yield chunk
+          }
 
           await sleep(interval)
         }
