@@ -102,7 +102,7 @@ export async function apply(ctx: Context, config: Config) {
 
   const stats = await ctx.database.stats()
   if (!stats.tables.vayu?.count) {
-    logger.info('随蓝题库为空，尝试下载...')
+    logger.info('随蓝题库为空，下载中...')
     const parser = (await import('csv-parse')).parse({ columns: true })
     const buffer: Tables['vayu'][] = []
     parser.on('readable', () => {
