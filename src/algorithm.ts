@@ -16,10 +16,13 @@ export function mergeChunks(words: string[], maxChunks: number, punctBias: numbe
   }
 
   const splitBonus = (idx: number): number => {
-    if (idx <= 0 || idx >= n)
-      return 1.0
-    const prevLast = words[idx - 1].slice(-1)
-    return GOOD_SPLIT_END.test(prevLast) ? punctBias : 1
+    if (idx > 0 && idx < n) {
+      const prevLast = words[idx - 1].slice(-1)
+      if (GOOD_SPLIT_END.test(prevLast)) {
+        return punctBias
+      }
+    }
+    return 1.0
   }
 
   const lens = words.map(w => w.length)
