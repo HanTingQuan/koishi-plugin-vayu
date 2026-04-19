@@ -19,6 +19,7 @@
     "koishi-plugin-montmorill": "workspace:*"
   },
   "dependencies": {
-    "@node-rs/jieba": "^2.0.1"
+    "@node-rs/jieba": "^2.0.1",
+    "csv-parse": "^6.2.1"
   }
 }
