@@ -67,7 +67,7 @@ export async function apply(ctx: Context, config: Config) {
         return '未找到符合条件的随蓝！'
 
       if (options?.answer)
-        return `${vayu.source}${vayu.vayu}#${vayu.id}${vayu.answer}\n${vayu.desc}`
+        return `${vayu.source}${vayu.vayu}#${vayu.id}\n${vayu.answer}\n${vayu.desc}`
 
       const description = vayu.desc.trim()
       const words = description.startsWith('1.')
