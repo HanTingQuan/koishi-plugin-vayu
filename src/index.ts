@@ -67,7 +67,7 @@ export async function apply(ctx: Context, config: Config) {
         return '未找到符合条件的随蓝！'
 
       if (options?.answer)
-        return `${vayu.source}${vayu.vayu}#${vayu.id}\n${vayu.answer}\n${vayu.desc}`
+        return `${vayu.source}#${vayu.id}${vayu.vayu}\n${vayu.answer}\n${vayu.desc}`
 
       const description = vayu.desc.trim()
       const words = description.startsWith('1.')
@@ -86,7 +86,7 @@ export async function apply(ctx: Context, config: Config) {
               vayu.source,
               shortcut.input(`/vayu.answer ${vayu.id} `, `#${vayu.id}`),
               vayu.vayu,
-              `${chunk}`,
+              `\n${chunk}`,
             ].join('')
           }
           else if (index === chunks.length - 1) {
