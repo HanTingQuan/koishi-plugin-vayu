@@ -118,6 +118,7 @@ export async function apply(ctx: Context, config: Config) {
       const correctAnswer = vayu.answer.split('/')
       if (!correctAnswer.includes(answer))
         return '❌️回答错误！'
+      session.execute('vayu')
       return '✅️回答正确！'
     })
 
