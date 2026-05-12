@@ -81,15 +81,7 @@ export async function apply(ctx: Context, config: Config) {
         for (let index = 0; index < chunks.length; index++) {
           const chunk = chunks[index]
 
-          if (index === 0) {
-            yield [
-              vayu.source,
-              shortcut.input(`/vayu.answer ${vayu.id} `, `#${vayu.id}`),
-              vayu.vayu,
-              `\n${chunk}`,
-            ].join('')
-          }
-          else if (index === chunks.length - 1) {
+          if (index === chunks.length - 1) {
             return [
               `${chunk}我读完了。`,
               `> 回答随蓝 👉 ${shortcut.input(`/vayu.answer ${vayu.id}`)}`,
@@ -97,9 +89,14 @@ export async function apply(ctx: Context, config: Config) {
               `> 再来一题 👉 ${shortcut(isDirect, '/vayu')}`,
             ].join('\n')
           }
-          else {
-            yield chunk
-          }
+
+          // eslint-disable-next-line style/multiline-ternary
+          yield index === 0 ? [
+            vayu.source,
+            shortcut.input(`/vayu.answer ${vayu.id} `, `#${vayu.id}`),
+            vayu.vayu,
+            `\n${chunk}`,
+          ].join('') : chunk
 
           await sleep(interval)
         }
