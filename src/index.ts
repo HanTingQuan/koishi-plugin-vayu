@@ -1,9 +1,9 @@
-import type { Channel, Context, h, Tables } from 'koishi'
-import {} from '@koishijs/plugin-help'
+import type { Channel, Context, Tables } from 'koishi'
+import { } from '@koishijs/plugin-help'
 import { Jieba } from '@node-rs/jieba'
 import { dict } from '@node-rs/jieba/dict'
-import { $, Logger, Schema, sleep, Time } from 'koishi'
-import { shortcut, stream } from 'koishi-plugin-montmorill'
+import { $, h, Logger, Schema, sleep, Time } from 'koishi'
+import { shortcut } from 'koishi-plugin-montmorill'
 import { mergeChunks } from './algorithm'
 
 export const name = 'vayu'
@@ -56,11 +56,11 @@ export async function apply(ctx: Context, config: Config) {
     .option('interval', '-i <interval:number> 间隔时间（秒）。')
     .option('answer', '-a 查看答案。')
     .option('bias', '-b <bias:number> 标点偏好系数。', { hidden: true })
-    .action(async ({ options, session }, id?: number) => {
+    .action(async ({ options, session }, vayuId?: number) => {
       if (!session)
         return
 
-      const [vayu] = await ctx.database.select('vayu', id ? { id } : {})
+      const [vayu] = await ctx.database.select('vayu', vayuId ? { id: vayuId } : {})
         .orderBy($.random)
         .limit(1)
         .execute()
@@ -78,39 +78,28 @@ export async function apply(ctx: Context, config: Config) {
       const chunks = mergeChunks(words, config.maxChunks, options?.bias ?? config.punctBias)
       const interval = (options?.interval || 0) * 1000 || config.interval
 
-      async function* generator(isDirect: boolean) {
-        for (let index = 0; index < chunks.length; index++) {
-          const chunk = chunks[index]
+      for (let index = 0, id; index < chunks.length; index++) {
+        const chunk = chunks[index]
 
-          if (index === chunks.length - 1) {
-            return [
-              `${chunk}我读完了。`,
-              `> 回答随蓝 👉 ${shortcut.input(`/vayu.answer ${vayu.id} `)}`,
-              `> 查看答案 👉 ${shortcut(isDirect, `/vayu ${vayu.id} -a`)}`,
-              `> 再来一题 👉 ${shortcut(isDirect, '/vayu')}`,
-            ].join('\n')
-          }
-
-          // eslint-disable-next-line style/multiline-ternary
-          yield index === 0 ? [
-            vayu.source,
-            shortcut.input(`/vayu.answer ${vayu.id} `, `#${vayu.id}`),
-            vayu.vayu,
-            `\n${chunk}`,
-          ].join('') : chunk
-
-          await sleep(interval)
+        if (index === chunks.length - 1) {
+          return h('stream', { id, index, done: true }, [
+            `${chunk}我读完了。`,
+            `> 回答随蓝 👉 ${shortcut.input(`/vayu.answer ${vayu.id} `)}`,
+            `> 查看答案 👉 ${shortcut(session.isDirect, `/vayu ${vayu.id} -a`)}`,
+            `> 再来一题 👉 ${shortcut(session.isDirect, '/vayu')}`,
+          ].join('\n'))
         }
-      }
 
-      streaming.set(session.channelId!, vayu.id)
-      const send = (element: h): Promise<[string]> => {
-        return streaming.get(session.channelId!)
-          ? session.send(element) as Promise<[string]>
-          : Promise.resolve([''])
-      }
+        // eslint-disable-next-line style/multiline-ternary
+        [id] = await session.send(h('stream', { id, index }, index === 0 ? [
+          vayu.source,
+          shortcut.input(`/vayu.answer ${vayu.id} `, `#${vayu.id}`),
+          vayu.vayu,
+          `\n${chunk}`,
+        ].join('') : chunk))
 
-      await stream(generator(session.isDirect), send)
+        await sleep(interval)
+      }
     })
     .subcommand('.answer <id:number> <answer:string>', '回答随蓝')
     .action(async ({ session }, id, answer) => {
