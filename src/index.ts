@@ -2,8 +2,8 @@ import type { Channel, Context, Tables } from 'koishi'
 import { } from '@koishijs/plugin-help'
 import { Jieba } from '@node-rs/jieba'
 import { dict } from '@node-rs/jieba/dict'
+import { inlinecmd } from '@satorijs/adapter-qq'
 import { $, h, Logger, Schema, sleep, Time } from 'koishi'
-import { shortcut } from 'koishi-plugin-montmorill'
 import { mergeChunks } from './algorithm'
 
 export const name = 'vayu'
@@ -78,22 +78,23 @@ export async function apply(ctx: Context, config: Config) {
       const chunks = mergeChunks(words, config.maxChunks, options?.bias ?? config.punctBias)
       const interval = (options?.interval || 0) * 1000 || config.interval
 
-      for (let index = 0, id; index < chunks.length; index++) {
+      const enter = session.isDirect
+      for (let index = 0; index < chunks.length; index++) {
         const chunk = chunks[index]
 
         if (index === chunks.length - 1) {
-          return h('stream', { id, index, done: true }, [
+          return h('stream', { done: true }, [
             `${chunk}我读完了。`,
-            `> 回答随蓝 👉 ${shortcut.input(`/vayu.answer ${vayu.id} `)}`,
-            `> 查看答案 👉 ${shortcut(session.isDirect, `/vayu ${vayu.id} -a`)}`,
-            `> 再来一题 👉 ${shortcut(session.isDirect, '/vayu')}`,
+            `> 回答随蓝 👉 ${inlinecmd({ text: `/vayu.answer ${vayu.id} ` })}`,
+            `> 查看答案 👉 ${inlinecmd({ enter, text: `/vayu ${vayu.id} -a` })}`,
+            `> 再来一题 👉 ${inlinecmd({ enter, text: '/vayu' })}`,
           ].join('\n'))
         }
 
         // eslint-disable-next-line style/multiline-ternary
-        [id] = await session.send(h('stream', { id, index }, index === 0 ? [
+        await session.send(h('stream', index === 0 ? [
           vayu.source,
-          shortcut.input(`/vayu.answer ${vayu.id} `, `#${vayu.id}`),
+          inlinecmd({ text: `/vayu.answer ${vayu.id} `, show: `#${vayu.id}` }),
           vayu.vayu,
           `\n${chunk}`,
         ].join('') : chunk))
